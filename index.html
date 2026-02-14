@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEEP LOOKING</title>
+    <meta name="description" content="147,570 UFO SIGHTINGS, 1905–2023. A visualization of data from NUFORC.">
+
+    <!-- Social Share -->
+    <meta property="og:title" content="KEEP LOOKING">
+    <meta property="og:description" content="147,570 UFO SIGHTINGS, 1905–2023. A visualization of data from NUFORC.">
+    <meta property="og:image" content="card.png">
+    <meta property="twitter:card" content="summary_large_image">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
+
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+            /* Prevent browser zooming/scrolling */
+        }
+
+        /* Minimalist Title */
+        .title {
+            position: fixed;
+            bottom: 40px;
+            right: 80px;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .title h1 {
+            font-size: 32px;
+            color: #fff;
+            letter-spacing: 2px;
+            font-weight: 300;
+            margin: 0;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        body:hover .title h1 {
+            opacity: 1;
+        }
+
+        #canvas {
+            display: block;
+            cursor: crosshair;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #333;
+            padding: 14px 18px;
+            color: #fff;
+            font-size: 13px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s;
+            z-index: 100;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+        }
+
+        .t-title {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+        }
+
+        .t-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 4px;
+            color: #888;
+        }
+
+        .t-val {
+            color: #ccc;
+            text-align: right;
+        }
+
+        /* Reveal Element */
+        .reveal-element {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+            z-index: 50;
+        }
+
+        .reveal-element.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* HUD Container */
+        .hud-container {
+            position: fixed;
+            top: 40px;
+            left: 80px;
+            text-align: left;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .hud-container h1 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            color: #fff;
+            margin: 0 0 6px 0;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hud-container .stat-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .hud-container .meta-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #555;
+            margin-top: 16px;
+            letter-spacing: 1px;
+        }
+
+        /* Footer */
+        .footer-links {
+            position: fixed;
+            bottom: 40px;
+            left: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .footer-links a {
+            color: #444;
+            text-decoration: none;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            transition: color 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .footer-links.visible a {
+            color: #888;
+        }
+
+        .footer-links a:hover {
+            color: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .hud-container {
+                top: 20px;
+                left: 20px;
+                max-width: 200px;
+            }
+
+            .footer-links {
+                bottom: 20px;
+                left: 20px;
+            }
+
+            .title {
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .title h1 {
+                font-size: 18px;
+            }
+
+            #tooltip {
+                font-size: 11px;
+                padding: 10px 14px;
+                width: auto;
+                max-width: 280px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="hud-container reveal-element">
+        <h1>UFO Sightings</h1>
+        <div class="stat-line">147,570 REPORTS</div>
+        <div class="stat-line">USA, 1905–2023</div>
+        <div class="meta-line">TIME • LOCATION • SHAPE • SIZE • SPEED</div>
+    </div>
+
+    <div class="footer-links reveal-element">
+        <a href="https://nuforc.org/" target="_blank">source data</a>
+        <a href="https://lukesteuber.com" target="_blank">about me</a>
+        <a href="https://dr.eamer.dev/datavis/poems/" target="_blank">more projects</a>
+    </div>
+
+    <div class="title">
+        <h1>KEEP LOOKING</h1>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <div id="tooltip"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+
+        let height, width, dpr;
+        let particles = [];
+        let simulationTime = 0;
+        let mouseX = -1000, mouseY = -1000;
+        let hoveredParticle = null;
+
+        // Viewport State
+        let zoom = 1;
+        let targetZoom = 1;
+        let panX = 0, panY = 0;
+        let isDragging = false;
+        let lastDragX = 0, lastDragY = 0;
+
+        // Touch State
+        let initialPinchDistance = null;
+        let initialZoom = 1;
+
+        // Shape Map (Text to ID for drawing)
+        const SHAPES = {
+            'Light': 0, 'Circle': 1, 'Triangle': 2, 'Fireball': 3, 'Disk': 4, 'Sphere': 5, 'Other': 6
+        };
+
+        async function init() {
+            function resize() {
+                dpr = window.devicePixelRatio || 1;
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = Math.ceil(width * dpr);
+                canvas.height = Math.ceil(height * dpr);
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+            }
+            window.addEventListener('resize', () => { resize(); });
+            resize();
+
+            const data = await d3.json('data/watchers_data.json');
+
+            // Layout: Radial
+            const minYear = 1940;
+            const maxYear = 2024;
+
+            particles = data.map(d => {
+                let yr = d.y;
+                if (yr < minYear) yr = minYear;
+
+                const nTime = (yr - minYear) / (maxYear - minYear);
+                const angle = Math.random() * Math.PI * 2;
+
+                return {
+                    data: d,
+                    nTime: nTime,
+                    angle: angle,
+                    shape: SHAPES[d.s] || 6,
+                    blinkSpeed: Math.random() * 0.1,
+                    phase: Math.random() * Math.PI * 2
+                };
+            }).sort((a, b) => a.nTime - b.nTime);
+
+            requestAnimationFrame(render);
+        }
+
+        function render(time) {
+            simulationTime = time * 0.001;
+
+            // Smooth Zoom
+            zoom += (targetZoom - zoom) * 0.1;
+
+            const cx = width / 2;
+            const cy = height / 2;
+            const maxR = Math.min(width, height) * 0.45;
+
+            // Clear Screen (Reset Transform first)
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Apply DPI Scale
+            ctx.scale(dpr, dpr);
+
+            // Apply Camera Transform
+            ctx.translate(cx, cy);
+            ctx.translate(panX, panY);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-cx, -cy);
+
+            // Radar Sweep
+            const SWEEP_PERIOD = 72;
+            const sweepAngle = (simulationTime * (Math.PI * 2 / SWEEP_PERIOD)) % (Math.PI * 2);
+
+            // Draw Radar Grid
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1 / zoom;
+            ctx.beginPath();
+            ctx.arc(cx, cy, maxR * 0.25, 0, Math.PI * 2);
+            ctx.arc(cx, cy, maxR * 0.5, 0, Math.PI * 2);
+            ctx.arc(cx, cy, maxR * 0.75, 0, Math.PI * 2);
+            ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Draw Sweep Line
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(sweepAngle) * maxR, cy + Math.sin(sweepAngle) * maxR);
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1 / zoom;
+            ctx.stroke();
+
+            // Draw Crosshairs
+            ctx.beginPath();
+            ctx.moveTo(cx - 10 / zoom, cy); ctx.lineTo(cx + 10 / zoom, cy);
+            ctx.moveTo(cx, cy - 10 / zoom); ctx.lineTo(cx, cy + 10 / zoom);
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1 / zoom;
+            ctx.stroke();
+
+            let closestDist = 20 / zoom;
+            let closestP = null;
+
+            // World Mouse
+            const wMx = (mouseX - cx - panX) / zoom + cx;
+            const wMy = (mouseY - cy - panY) / zoom + cy;
+
+            particles.forEach(p => {
+                const r = p.nTime * maxR;
+                const x = cx + Math.cos(p.angle) * r;
+                const y = cy + Math.sin(p.angle) * r;
+
+                // Visual Calculations
+                let strength = 0;
+                let angleDist = sweepAngle - p.angle;
+                if (angleDist < 0) angleDist += Math.PI * 2;
+
+                if (angleDist < 1.5) {
+                    let d = 1 - (angleDist / 1.5);
+                    strength = d * d * d;
+                }
+
+                strength = 0.05 + (strength * 0.95);
+
+                // Properties
+                let radius = 1.0;
+                if (p.data.sz === "Medium") radius = 1.2;
+                if (p.data.sz === "Large") radius = 1.6;
+
+                // Speed Motion
+                let jitter = 0;
+                let pulse = 1;
+
+                if (p.data.sp === "Instant") {
+                    jitter = (Math.random() - 0.5) * 3;
+                    pulse = 0.5 + Math.random() * 0.5;
+                } else if (p.data.sp === "Short") {
+                    jitter = (Math.random() - 0.5) * 1;
+                    pulse = 0.8 + Math.sin(simulationTime * 10 + p.phase) * 0.2;
+                } else if (p.data.sp === "Medium") {
+                    pulse = 0.8 + Math.sin(simulationTime * 2 + p.phase) * 0.2;
+                } else if (p.data.sp === "Long") {
+                    p.angle += 0.0002;
+                }
+
+                const lx = x + jitter;
+                const ly = y + jitter;
+
+                const dx = wMx - lx;
+                const dy = wMy - ly;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestP = p;
+                }
+
+                const alpha = strength * pulse;
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+
+                if (zoom > 3) {
+                    drawShape(ctx, p.shape, lx, ly, radius * 3);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(lx, ly, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            if (closestP) {
+                hoveredParticle = closestP;
+                const r = closestP.nTime * maxR;
+                const x = cx + Math.cos(closestP.angle) * r;
+                const y = cy + Math.sin(closestP.angle) * r;
+
+                const agitation = 2 / zoom;
+                const ax = x + (Math.random() - 0.5) * agitation;
+                const ay = y + (Math.random() - 0.5) * agitation;
+
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillStyle = '#fff';
+
+                let radius = 1.0;
+                if (closestP.data.sz === "Medium") radius = 1.2;
+                if (closestP.data.sz === "Large") radius = 1.6;
+
+                if (zoom > 3) {
+                    drawShape(ctx, closestP.shape, ax, ay, radius * 3);
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(ax, ay, radius * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1 / zoom;
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1 / zoom;
+                ctx.stroke();
+
+                const sx = (x - cx) * zoom + cx + panX;
+                const sy = (y - cy) * zoom + cy + panY;
+
+                showTooltip(closestP.data, sx, sy);
+                showRevealElements();
+                canvas.style.cursor = 'pointer';
+            } else {
+                if (hoveredParticle) hideRevealElements();
+                hoveredParticle = null;
+
+                hideTooltip();
+                canvas.style.cursor = isDragging ? 'grabbing' : 'crosshair';
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        const SVG_PATHS = {
+            'Light': 'M50 0 L58 40 L100 50 L58 60 L50 100 L42 60 L0 50 L42 40 Z',
+            'Disk': 'M5 55 Q50 85 95 55 Q100 45 95 35 Q50 5 5 35 Q0 45 5 55 Z M30 35 Q50 10 70 35',
+            'Triangle': 'M50 10 L100 90 L50 75 L0 90 Z',
+            'Fireball': 'M50 100 Q10 70 10 40 A40 40 0 1 1 90 40 Q90 70 50 100 Z',
+            'Sphere': 'M50 50 m-48, 0 a 48,48 0 1,0 96,0 a 48,48 0 1,0 -96,0',
+            'Circle': 'M50 50 m-48, 0 a 48,48 0 1,0 96,0 a 48,48 0 1,0 -96,0 M50 50 m-25, 0 a 25,25 0 1,1 50,0 a 25,25 0 1,1 -50,0',
+            'Other': 'M50 5 Q70 30 70 60 L85 95 L50 85 L15 95 L30 60 Q30 30 50 5 Z M50 25 A5 5 0 1 1 50 35 A5 5 0 1 1 50 25'
+        };
+
+        const SHAPE_PATHS = {
+            0: new Path2D(SVG_PATHS['Light']),
+            1: new Path2D(SVG_PATHS['Circle']),
+            2: new Path2D(SVG_PATHS['Triangle']),
+            3: new Path2D(SVG_PATHS['Fireball']),
+            4: new Path2D(SVG_PATHS['Disk']),
+            5: new Path2D(SVG_PATHS['Sphere']),
+            6: new Path2D(SVG_PATHS['Other'])
+        };
+
+        function drawShape(ctx, type, x, y, r) {
+            const s = r / 40;
+            ctx.translate(x, y);
+            ctx.scale(s, s);
+            ctx.translate(-50, -50);
+            ctx.fill(SHAPE_PATHS[type]);
+            ctx.translate(50, 50);
+            ctx.scale(1 / s, 1 / s);
+            ctx.translate(-x, -y);
+        }
+
+        const revealElements = document.querySelectorAll('.reveal-element');
+        const titleArea = document.querySelector('.title');
+        let isUILocked = false;
+        let hideTimeout = null;
+
+        function showRevealElements() {
+            if (hideTimeout) clearTimeout(hideTimeout);
+            revealElements.forEach(el => el.classList.add('visible'));
+        }
+
+        function hideRevealElements() {
+            if (!isUILocked) {
+                hideTimeout = setTimeout(() => {
+                    revealElements.forEach(el => el.classList.remove('visible'));
+                }, 2000);
+            }
+        }
+
+        window.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (isDragging) {
+                panX += e.clientX - lastDragX;
+                panY += e.clientY - lastDragY;
+                lastDragX = e.clientX;
+                lastDragY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mousedown', e => {
+            if (e.target.closest('a')) return;
+            isDragging = true;
+            lastDragX = e.clientX;
+            lastDragY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            canvas.style.cursor = 'crosshair';
+        });
+
+        window.addEventListener('wheel', e => {
+            e.preventDefault();
+            const zoomSpeed = 0.001;
+            targetZoom -= e.deltaY * zoomSpeed;
+            if (targetZoom < 0.8) targetZoom = 0.8;
+            if (targetZoom > 10) targetZoom = 10;
+        }, { passive: false });
+
+        // Touch Support
+        window.addEventListener('touchstart', e => {
+            if (e.target.closest('a')) return;
+            // e.preventDefault(); // allow clicking links
+
+            if (e.touches.length === 1) {
+                // Drag
+                isDragging = true;
+                lastDragX = e.touches[0].clientX;
+                lastDragY = e.touches[0].clientY;
+                // Move mouse there to trigger hover interaction
+                mouseX = e.touches[0].clientX;
+                mouseY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                // Pinch start
+                isDragging = false;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+                initialZoom = targetZoom;
+            }
+
+            // On tap, toggle UI lock
+            if (e.touches.length === 1) {
+                isUILocked = !isUILocked;
+                if (isUILocked) showRevealElements();
+                else hideRevealElements();
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', e => {
+            e.preventDefault(); // Prevent scrolling
+            if (isDragging && e.touches.length === 1) {
+                const x = e.touches[0].clientX;
+                const y = e.touches[0].clientY;
+                panX += x - lastDragX;
+                panY += y - lastDragY;
+                lastDragX = x;
+                lastDragY = y;
+                mouseX = x;
+                mouseY = y;
+            } else if (e.touches.length === 2 && initialPinchDistance) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Calculate scale ratio
+                const scale = dist / initialPinchDistance;
+                targetZoom = initialZoom * scale;
+                if (targetZoom < 0.8) targetZoom = 0.8;
+                if (targetZoom > 10) targetZoom = 10;
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+            initialPinchDistance = null;
+        });
+
+        revealElements.forEach(el => {
+            el.addEventListener('mouseenter', showRevealElements);
+            el.addEventListener('mouseleave', hideRevealElements);
+        });
+        titleArea.addEventListener('mouseenter', showRevealElements);
+        titleArea.addEventListener('mouseleave', hideRevealElements);
+
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('a')) return;
+            // Click/Tap handling logic is also in touchstart for immediate response, 
+            // but keep this for mouse clicks.
+            // On Mobile click might fire after touch, handle dupes?
+            // Actually 'click' fires after 'touchend'
+            // We can rely on touchstart/touchend for mobile and click for desktop
+        });
+
+        function showTooltip(d, x, y) {
+            tooltip.innerHTML = `
+                <div class="t-title">CONTACT ${d.y}</div>
+                <div class="t-row"><span>DATE</span> <span class="t-val">${d.dt}</span></div>
+                <div class="t-row"><span>TIME</span> <span class="t-val">${d.tm}</span></div>
+                <div class="t-row"><span>LOC</span> <span class="t-val">${d.loc || 'Unknown'}</span></div>
+                <div class="t-row"><span>SHAPE</span> <span class="t-val">${d.s}</span></div>
+                <div class="t-row"><span>SIZE</span> <span class="t-val">${d.sz || 'Unknown'}</span></div>
+                <div class="t-row"><span>SPEED</span> <span class="t-val">${d.sp || 'Unknown'}</span></div>
+            `;
+
+            let tx = x + 20;
+            let ty = y + 20;
+
+            // Better bounds checking for mobile
+            const box = tooltip.getBoundingClientRect();
+            // Just use heuristic size 220x200
+            if (tx + 220 > window.innerWidth) tx = x - 230;
+            if (ty + 200 > window.innerHeight) ty = y - 210;
+
+            // Stay on screen
+            if (tx < 10) tx = 10;
+            if (ty < 10) ty = 10;
+
+            tooltip.style.left = `${tx}px`;
+            tooltip.style.top = `${ty}px`;
+            tooltip.style.opacity = 1;
+        }
+
+        function hideTooltip() {
+            tooltip.style.opacity = 0;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
