@@ -1,68 +1,69 @@
-# KEEP LOOKING
+# Keep Looking
 
-147,570 UFO sightings from NUFORC as a rotating radar. The sweep reveals clusters and patterns across North America, 1905-2023.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Live Site](https://img.shields.io/badge/live-dr.eamer.dev-brightgreen)](https://dr.eamer.dev/datavis/poems/keep-looking/)
 
-## Features
+147,570 UFO sightings from the National UFO Reporting Center (NUFORC), plotted on a radar screen. The sweep rotates continuously, illuminating reports and then letting them fade — the same way a real radar trace decays.
 
-- **147,570 sightings**: Complete NUFORC database
-- **Radar sweep animation**: Rotating scan reveals sightings
-- **Geographic clustering**: Hotspots near population centers
-- **Timeline**: 118 years of sightings (1905-2023)
-- **Interactive**: Hover for location and date details
-- **Decay effect**: Older sightings fade as sweep passes
+## What it does
 
-## Technical Stack
+Each dot on the radar is a sighting from the NUFORC database, 1905–2023. Distance from the center encodes year — inner rings are older, outer rings are more recent. The rotating sweep line hits each point and briefly lights it up. Hover to see the date, location, shape, size, and reported speed.
 
-- **D3.js v7**: Geographic projections and data binding
-- **Canvas API**: Hardware-accelerated radar effect
-- **Vanilla JavaScript**: No frameworks
-- **Inter + JetBrains Mono fonts**: Clean monospace aesthetic
+The encoding is literal: the visualization works like a radar because the subject matter is the kind of thing you'd see on a radar.
+
+- **Shape** is encoded as a glyph at high zoom (light, disk, triangle, fireball, sphere, circle, other)
+- **Speed** affects animation behavior — instant sightings jitter chaotically, slow ones drift, long-duration ones orbit slightly
+- **Size** controls dot radius (small/medium/large)
+- Zoom in up to 10x to pick apart dense clusters; drag to pan
+
+## Controls
+
+| Input | Action |
+|-------|--------|
+| Mouse move | Highlight nearest sighting |
+| Scroll wheel | Zoom in/out (0.8x–10x) |
+| Click + drag | Pan |
+| Pinch | Zoom (mobile) |
+| Touch + drag | Pan (mobile) |
+| Tap | Toggle UI lock |
+
+## Stack
+
+- D3.js v7 for data loading and layout math
+- Canvas API for the radar rendering loop
+- Inter + JetBrains Mono for the monospace readout aesthetic
+- No frameworks, no build step
 
 ## Files
 
-- `index.html` - Complete radar visualization (22KB)
-- `data/watchers_data.json` - NUFORC sightings database
-- `process_watchers_data.py` - Data pipeline script (5KB)
-- `card.png` - Open Graph image (231KB)
-
-## Data Structure
-
-```json
-{
-  "date": "2023-05-15",
-  "latitude": 47.6062,
-  "longitude": -122.3321,
-  "city": "Seattle",
-  "state": "WA",
-  "shape": "Triangle",
-  "duration": "5 minutes"
-}
+```
+keep-looking/
+├── index.html                  # Full radar visualization
+├── data/
+│   └── watchers_data.json      # 147,570 NUFORC sightings
+├── process_watchers_data.py    # Data cleaning pipeline
+└── card.png                    # 1200x630 Open Graph image
 ```
 
-## Processing Pipeline
+## Data
 
-```bash
-python3 process_watchers_data.py
-# Converts raw NUFORC data to JSON format
-# Geocodes locations to lat/lon coordinates
-# Output: data/watchers_data.json
-```
+Source: [National UFO Reporting Center (NUFORC)](https://nuforc.org/)
 
-## Local Development
+The dataset spans 1905–2023 and includes date, time, location, shape, duration, and witness descriptions. `process_watchers_data.py` cleans and converts the raw NUFORC export to the JSON format the visualization expects.
+
+## Running locally
 
 ```bash
 python3 -m http.server 8000
-# Visit http://localhost:8000
+# open http://localhost:8000
 ```
-
-## Data Source
-
-National UFO Reporting Center (NUFORC)
-https://nuforc.org/
-
-Database spans 1905-2023 with detailed reports including date, location, shape, duration, and witness descriptions.
 
 ## Author
 
-Luke Steuber
-https://lukesteuber.com
+Luke Steuber — [lukesteuber.com](https://lukesteuber.com) — [@lukesteuber.com](https://bsky.app/profile/lukesteuber.com) on Bluesky
+
+Part of the [data poems collection](https://dr.eamer.dev/datavis/poems/) at dr.eamer.dev.
+
+## License
+
+MIT
